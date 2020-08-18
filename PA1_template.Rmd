@@ -108,5 +108,5 @@ new_plot_data <- new_data %>%
     summarize(steps = mean(steps, na.rm = T))
 
 head(new_plot_data)
-ggplot(new_plot_data, aes(interval, steps)) + facet_wrap(. ~ new_plot_data$daytype, nrow = 2, ncol = 1) + geom_line() + ggtitle("Average Daily Activity Pattern") + xlab("5 Min Interval") + ylab("Average Steps Taken")  
+ggplot(new_plot_data, aes(interval, steps)) + facet_wrap(. ~ new_plot_data$daytype, nrow = 2, ncol = 1) + geom_line() + ggtitle("Average Daily Activity Pattern (Weekday vs Weekend)") + xlab("5 Min Interval") + ylab("Average Steps Taken")  
 ```
