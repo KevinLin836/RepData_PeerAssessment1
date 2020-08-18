@@ -7,19 +7,106 @@ output:
 
 
 ## Loading and preprocessing the data
+To load the data in activity.csv file, we check if the file exists in the directory. If not, we unzip the activity.zip folder and data from the csv file into the global environment. 
 
+```{r}
+if (!file.exists("activity.csv")) {
+    unzip("activity.zip")
+}
+data <- read.csv("activity.csv")
+```
 
 
 ## What is mean total number of steps taken per day?
 
+```{r}
+library(dplyr)
+total_steps <- data %>% 
+    group_by(date) %>%
+    summarize(steps = sum(steps, na.rm = T))    
+hist(total_steps$steps, xlab = "Total number of steps", main = "Histogram of total number of steps taken per day")  
+```  
 
+To calculate the mean and median total number of steps taken per day:  
+```{r}
+mean_steps <- mean(total_steps$steps, na.rm = T)
+median_steps <- median(total_steps$steps, na.rm = T)
+```
+The mean total number of steps is **`r mean_steps`**. The median total number of steps is **`r median_steps`**.  
 
-## What is the average daily activity pattern?
+## What is the average daily activity pattern?  
 
+Looking at the step interval vs. the average number of steps taken:  
+```{r}
+library(ggplot2)
+mean_steps <- data %>%
+    group_by(interval) %>%
+    summarize(steps = mean(steps, na.rm = T))
+ggplot(mean_steps, aes(interval, steps)) + geom_line() + ggtitle("Average Daily Activity Pattern") + xlab("5 Min Interval") + ylab("Average Steps")  
+```  
 
-
+To determine the 5-minute interval that contains the maximum number of steps:  
+```{r}
+max_int <- mean_steps$interval[mean_steps$steps == max(mean_steps$steps)]
+```  
+The 5-minute interval that contains the maximum number of steps is **`r max_int`**.  
 ## Imputing missing values
+```{r}
+num_NA <- table(is.na(data$steps))
+```
 
+There are **`r num_NA[2]`** missing values. To fill all of the missing values in the dataset, the mean value of that 5 min interval will be used as a replacement.
+```{r}
+transformed_data <- data
+for (i in seq_along(data$steps)){
+    if (is.na(data$steps[i])){
+        transformed_data$steps[i] <- mean_steps$steps[mean_steps$interval == data$interval[i]]
+    }
+}
+```
 
+A new dataset, *transformed_data*, with all of the missing values filled in is created. We display the first few rows of the new dataset.  
+```{r}
+head(transformed_data)
+```
+
+Comparing the new dataset to the old:  
+```{r}
+new_total_steps <- transformed_data %>% 
+    group_by(date) %>%
+    summarize(steps = sum(steps))
+hist(new_total_steps$steps, xlab = "Total number of steps", main = "Histogram of total number of steps taken per day")  
+```  
+
+With the *NA* values filled in, the histogram plot changed. To calculate the mean and median total number of steps taken per day:  
+```{r}
+new_mean_steps <- mean(new_total_steps$steps)
+new_median_steps <- median(new_total_steps$steps)
+```  
+
+The mean total number of steps of the new datatset is **10766.19**. The median total number of steps is **10766.19**. Imputing missing data increased the mean and median total number of steps. 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+To compare the activity patterns between weekdays and weekends:  
+```{r}
+transformed_data$date <- as.POSIXct(transformed_data$date, format="%Y-%m-%d")
+new_data <- transformed_data %>%
+    mutate(day = weekdays(date), daytype = day) 
+for (i in seq_along(new_data$day)){
+    if (new_data$day[i] %in% c('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday')){
+        new_data$daytype[i] <- 'Weekday'
+    }
+    else if (new_data$day[i] %in% c('Saturday', 'Sunday')){
+        new_data$daytype[i] <- "Weekend"
+    }
+}
+head(new_data)
+
+new_plot_data <- new_data %>% 
+    group_by(interval, daytype) %>%
+    summarize(steps = mean(steps, na.rm = T))
+
+head(new_plot_data)
+ggplot(new_plot_data, aes(interval, steps)) + facet_wrap(. ~ new_plot_data$daytype, nrow = 2, ncol = 1) + geom_line() + ggtitle("Average Daily Activity Pattern") + xlab("5 Min Interval") + ylab("Average Steps Taken")  
+```
